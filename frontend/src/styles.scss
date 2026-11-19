@@ -1,0 +1,170 @@
+@use '@angular/material' as mat;
+
+// ── Tema Material 3 ─────────────────────────────────────────────────────
+html {
+  color-scheme: light;
+  @include mat.theme((
+    color: (primary: mat.$cyan-palette, tertiary: mat.$spring-green-palette),
+    typography: (plain-family: 'Plus Jakarta Sans', brand-family: 'Plus Jakarta Sans'),
+    density: 0,
+  ));
+}
+
+// Bloque aparte: Sass pide no mezclar declaraciones después de un @include anidado
+html {
+  // Cian intenso como color primario; verde azulado como complemento
+  --mat-sys-primary: #0891b2;
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-container: #cffafe;
+  --mat-sys-on-primary-container: #083344;
+  --mat-sys-surface-tint: #0891b2;
+
+  // ── Tokens propios ──
+  // Primario: cian (lo más llamativo de la interfaz)
+  --cf-pri-950: #083344;
+  --cf-pri-900: #164e63;
+  --cf-pri-800: #155e75;
+  --cf-pri-700: #0e7490;
+  --cf-pri-600: #0891b2;
+  --cf-pri-500: #06b6d4;
+  --cf-pri-400: #22d3ee;
+  --cf-pri-100: #cffafe;
+  --cf-pri-50: #ecfeff;
+  // Complemento: verde azulado (acentos, resultados positivos, detalles)
+  --cf-sec-700: #0f766e;
+  --cf-sec-600: #0d9488;
+  --cf-sec-500: #14b8a6;
+  --cf-sec-400: #2dd4bf;
+  --cf-sec-300: #5eead4;
+  --cf-sec-50: #f0fdfa;
+  --cf-cyan-500: #06b6d4;
+  --cf-ambar-500: #f59e0b;
+  --cf-rojo-600: #e11d48;
+  --cf-verde-500: #10b981;
+  --cf-texto: #0c2a36;
+  --cf-texto-suave: #4f6f7a;
+  --cf-borde: #cfe9f1;
+  --cf-fondo: #eefafd;
+  --cf-tarjeta: #ffffff;
+  --cf-radio: 20px;
+  --cf-sombra: 0 10px 30px -18px rgba(8, 51, 68, .35), 0 2px 6px -2px rgba(8, 51, 68, .08);
+  // El mismo degradado de la tarjeta "Monto aprobado", con un fondo más profundo para dar contraste
+  --cf-degradado: linear-gradient(135deg, #164e63 0%, #0e7490 45%, #06b6d4 100%);
+}
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', Roboto, 'Helvetica Neue', sans-serif;
+  color: var(--cf-texto);
+  background:
+    radial-gradient(1200px 500px at 100% -10%, rgba(6, 182, 212, .16), transparent 60%),
+    radial-gradient(900px 400px at -10% 110%, rgba(45, 212, 191, .12), transparent 60%),
+    var(--cf-fondo);
+  background-attachment: fixed;
+}
+
+// ── Utilidades ─────────────────────────────────────────────────────────
+.tarjeta {
+  background: var(--cf-tarjeta);
+  border-radius: var(--cf-radio);
+  box-shadow: var(--cf-sombra);
+  border: 1px solid rgba(8, 145, 178, .08);
+  padding: 22px;
+}
+
+.tarjeta-titulo {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 0 16px; font-size: 16px; font-weight: 700; color: var(--cf-texto);
+  mat-icon { color: var(--cf-pri-600); }
+}
+
+.pagina {
+  max-width: 1280px; margin: 0 auto; padding: 28px 24px 48px;
+}
+
+.encabezado-pagina {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 24px;
+  h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.6px; }
+  p { margin: 4px 0 0; color: var(--cf-texto-suave); }
+}
+
+.texto-suave { color: var(--cf-texto-suave); }
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12.5px; }
+
+// Botón principal con degradado
+.boton-degradado.mat-mdc-unelevated-button {
+  background: linear-gradient(135deg, #0e7490, #06b6d4) !important;
+  color: #fff !important;
+  border-radius: 14px;
+  padding: 0 22px;
+  height: 46px;
+  font-weight: 700;
+  box-shadow: 0 10px 24px -10px rgba(8, 145, 178, .8);
+  transition: transform .2s ease, box-shadow .2s ease;
+  &:hover { transform: translateY(-2px); box-shadow: 0 16px 30px -12px rgba(8, 145, 178, .9); }
+}
+
+// Skeleton de carga
+.skeleton {
+  border-radius: 12px;
+  background: linear-gradient(90deg, #dff3f9 25%, #f3fbfd 50%, #dff3f9 75%);
+  background-size: 200% 100%;
+  animation: brillo 1.3s ease-in-out infinite;
+}
+@keyframes brillo { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+// Diálogos
+.dialogo-crediflow .mat-mdc-dialog-surface {
+  border-radius: 28px !important;
+  overflow: hidden;
+}
+.cdk-overlay-backdrop.fondo-desenfocado {
+  background: rgba(8, 51, 68, .45);
+  backdrop-filter: blur(4px);
+}
+
+// Pasos del asistente: foco y hover en cian suave (no gris)
+.mat-step-header { border-radius: 14px; }
+.mat-step-header:hover:not([aria-disabled='true']),
+.mat-step-header.cdk-keyboard-focused,
+.mat-step-header.cdk-program-focused { background: var(--cf-pri-50) !important; }
+
+// Snackbars
+.snack-exito .mdc-snackbar__surface { background: var(--cf-pri-700) !important; }
+.snack-error .mdc-snackbar__surface { background: var(--cf-rojo-600) !important; }
+.snack-exito .mat-mdc-snack-bar-action, .snack-error .mat-mdc-snack-bar-action { color: #fff !important; }
+
+// Tablas
+.mat-mdc-table { background: transparent !important; }
+.mat-mdc-header-cell { font-weight: 700 !important; color: var(--cf-texto-suave) !important; font-size: 12.5px; text-transform: uppercase; letter-spacing: .4px; }
+// La tabla es transparente para heredar el fondo de la tarjeta, pero la cabecera
+// fija (sticky) necesita fondo sólido o las filas se ven a través de ella al hacer scroll.
+// !important: los estilos de Material se cargan después y tienen la misma especificidad
+.mat-mdc-header-row .mat-mdc-header-cell {
+  background: var(--cf-tarjeta) !important;
+}
+.mat-mdc-header-row .mat-mdc-table-sticky {
+  z-index: 2 !important;
+  box-shadow: 0 1px 0 var(--cf-borde), 0 6px 10px -8px rgba(8, 51, 68, .35);
+}
+
+.mat-mdc-row { transition: background .15s ease, box-shadow .15s ease; }
+// Filas alternas (cebra) para seguir cada registro con la vista
+.mat-mdc-row:nth-child(even) { background: #e4f5fb; }
+.mat-mdc-row .mat-mdc-cell { border-bottom-color: var(--cf-borde); }
+.mat-mdc-row.clicable { cursor: pointer; }
+.mat-mdc-row.clicable:hover {
+  background: var(--cf-pri-100);
+  box-shadow: inset 4px 0 0 var(--cf-pri-500);
+}
+
+// Campos de formulario redondeados
+.mat-mdc-form-field.redondo .mdc-notched-outline__leading { border-radius: 14px 0 0 14px !important; width: 14px !important; }
+.mat-mdc-form-field.redondo .mdc-notched-outline__trailing { border-radius: 0 14px 14px 0 !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

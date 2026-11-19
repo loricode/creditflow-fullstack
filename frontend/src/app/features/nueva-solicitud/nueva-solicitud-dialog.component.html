@@ -1,0 +1,170 @@
+<div class="cabecera">
+  <div>
+    <span class="etiqueta">Nueva solicitud</span>
+    <h2>Pide tu crédito en 3 pasos</h2>
+  </div>
+  <button mat-icon-button mat-dialog-close aria-label="Cerrar"><mat-icon>close</mat-icon></button>
+  <div class="burbujas" aria-hidden="true"><span></span><span></span><span></span></div>
+</div>
+
+@if (creada(); as resultado) {
+  <!-- ── Éxito ── -->
+  <div class="exito" data-tour="exito" @aparecer>
+    <div class="check">
+      <svg viewBox="0 0 52 52" aria-hidden="true">
+        <circle cx="26" cy="26" r="24" />
+        <path d="M14 27l8 8 16-17" />
+      </svg>
+    </div>
+    <h3>{{ resultado.repetida ? 'Esta solicitud ya estaba registrada' : '¡Solicitud recibida!' }}</h3>
+    <p>
+      Número <b>#{{ resultado.id }}</b>. La estamos evaluando ahora: score en PL/SQL, archivo en S3,
+      explicación con IA y registro en el core bancario. Toma unos segundos.
+    </p>
+    <button mat-flat-button class="boton-degradado" data-tour="ver-solicitud" (click)="verSolicitud()">
+      <mat-icon>visibility</mat-icon> Seguir la evaluación
+    </button>
+  </div>
+} @else {
+  <mat-dialog-content class="contenido">
+    <mat-stepper #stepper [linear]="true" class="pasos" animationDuration="350ms">
+
+      <!-- ── Paso 1 ── -->
+      <mat-step [stepControl]="datos" label="Tus datos">
+        <form [formGroup]="datos" class="formulario" @aparecer>
+          <mat-form-field appearance="outline" class="redondo completo">
+            <mat-label>Nombre completo</mat-label>
+            <mat-icon matPrefix>person</mat-icon>
+            <input matInput formControlName="nombreCompleto" autocomplete="name">
+            @if (datos.controls.nombreCompleto.hasError('required')) { <mat-error>Escribe tu nombre</mat-error> }
+            @if (datos.controls.nombreCompleto.hasError('servidor')) { <mat-error>{{ datos.controls.nombreCompleto.getError('servidor') }}</mat-error> }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="redondo">
+            <mat-label>Número de documento</mat-label>
+            <mat-icon matPrefix>badge</mat-icon>
+            <input matInput formControlName="numeroDocumento" inputmode="numeric" maxlength="12">
+            <mat-hint>Solo números, 6 a 12 dígitos</mat-hint>
+            @if (datos.controls.numeroDocumento.hasError('pattern')) { <mat-error>Debe tener entre 6 y 12 dígitos</mat-error> }
+            @if (datos.controls.numeroDocumento.hasError('required')) { <mat-error>Obligatorio</mat-error> }
+            @if (datos.controls.numeroDocumento.hasError('servidor')) { <mat-error>{{ datos.controls.numeroDocumento.getError('servidor') }}</mat-error> }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="redondo">
+            <mat-label>Correo electrónico</mat-label>
+            <mat-icon matPrefix>mail</mat-icon>
+            <input matInput type="email" formControlName="email" autocomplete="email">
+            @if (datos.controls.email.invalid) { <mat-error>Escribe un correo válido</mat-error> }
+          </mat-form-field>
+
+          <div class="acciones completo">
+            <span></span>
+            <button mat-flat-button class="boton-degradado" matStepperNext type="button" data-tour="paso1-continuar">
+              Continuar <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </form>
+      </mat-step>
+
+      <!-- ── Paso 2 ── -->
+      <mat-step [stepControl]="finanzas" label="Tus finanzas">
+        <form [formGroup]="finanzas" class="formulario" @aparecer>
+          <mat-form-field appearance="outline" class="redondo">
+            <mat-label>Ingresos mensuales</mat-label>
+            <span matTextPrefix>$&nbsp;</span>
+            <input matInput type="number" formControlName="ingresosMensuales" min="0" step="100000">
+            @if (finanzas.controls.ingresosMensuales.invalid) { <mat-error>Mínimo $500.000</mat-error> }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="redondo">
+            <mat-label>Gastos y deudas mensuales</mat-label>
+            <span matTextPrefix>$&nbsp;</span>
+            <input matInput type="number" formControlName="gastosMensuales" min="0" step="100000">
+          </mat-form-field>
+
+          <div class="indicador completo" data-tour="capacidad">
+            <div class="indicador-fila">
+              <span>Capacidad de pago</span>
+              <strong>{{ capacidad() | cop }}</strong>
+            </div>
+            <div class="barra-progreso">
+              <div class="relleno" [style.width.%]="endeudamiento()"
+                   [class.alto]="endeudamiento() > 60" [class.medio]="endeudamiento() > 40 && endeudamiento() <= 60"></div>
+            </div>
+            <span class="texto-suave">Endeudamiento actual: {{ endeudamiento().toFixed(0) }} % de tus ingresos</span>
+          </div>
+
+          <div class="acciones completo">
+            <button mat-button matStepperPrevious type="button"><mat-icon>arrow_back</mat-icon> Atrás</button>
+            <button mat-flat-button class="boton-degradado" matStepperNext type="button" data-tour="paso2-continuar">
+              Continuar <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </form>
+      </mat-step>
+
+      <!-- ── Paso 3 ── -->
+      <mat-step [stepControl]="credito" label="Tu crédito">
+        <form [formGroup]="credito" class="formulario" @aparecer>
+          <div class="productos completo" role="radiogroup" aria-label="Tipo de crédito">
+            @for (p of productos; track p.valor) {
+              <button type="button" class="producto" role="radio" [attr.data-tour]="'producto-' + p.valor"
+                      [attr.aria-checked]="creditoValor().tipoProducto === p.valor"
+                      [class.elegido]="creditoValor().tipoProducto === p.valor"
+                      (click)="elegirProducto(p.valor)">
+                <mat-icon>{{ p.icono }}</mat-icon>
+                <strong>{{ p.etiqueta }}</strong>
+                <small>{{ p.descripcion }}</small>
+              </button>
+            }
+          </div>
+
+          <div class="deslizador completo">
+            <div class="indicador-fila"><span>Monto</span><strong>{{ creditoValor().monto | cop }}</strong></div>
+            <mat-slider min="1000000" max="300000000" step="1000000" discrete [displayWith]="formatearPesos">
+              <input matSliderThumb formControlName="monto">
+            </mat-slider>
+          </div>
+
+          <div class="deslizador completo">
+            <div class="indicador-fila"><span>Plazo</span><strong>{{ creditoValor().plazoMeses }} meses</strong></div>
+            <mat-slider min="6" [max]="plazoMaximo()" step="6" discrete>
+              <input matSliderThumb formControlName="plazoMeses">
+            </mat-slider>
+          </div>
+
+          <div class="simulacion completo" data-tour="simulacion" [class.cargando]="!simulacion()">
+            @if (simulacion(); as s) {
+              <div class="cuota">
+                <span>Cuota estimada</span>
+                <strong>{{ s.cuotaMensual | cop }}</strong>
+                <small>Tasa base {{ s.tasaAnual | number: '1.1-2' }} % E.A. · intereses {{ s.totalIntereses | cop:'compacto' }}</small>
+              </div>
+              <div class="carga">
+                <div class="anillo" [style.--valor]="carga()"
+                     [class.alto]="carga() > 40" [class.medio]="carga() > 30 && carga() <= 40">
+                  <span>{{ carga().toFixed(0) }}%</span>
+                </div>
+                <small>de tu capacidad de pago<br>(máximo 40 %)</small>
+              </div>
+            } @else {
+              <div class="skeleton" style="height: 64px; flex: 1"></div>
+            }
+          </div>
+
+          @if (errorGeneral()) {
+            <div class="alerta completo" @aparecer><mat-icon>error_outline</mat-icon>{{ errorGeneral() }}</div>
+          }
+
+          <div class="acciones completo">
+            <button mat-button matStepperPrevious type="button"><mat-icon>arrow_back</mat-icon> Atrás</button>
+            <button mat-flat-button class="boton-degradado" type="button" data-tour="enviar" [disabled]="enviando()" (click)="enviar(stepper)">
+              @if (enviando()) { <mat-spinner diameter="20" /> } @else { <mat-icon>send</mat-icon> }
+              Enviar solicitud
+            </button>
+          </div>
+        </form>
+      </mat-step>
+    </mat-stepper>
+  </mat-dialog-content>
+}

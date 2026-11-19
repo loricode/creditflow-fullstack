@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Contrato del core bancario (contract-first): el WSDL se genera desde este XSD.
+  Las clases JAXB equivalentes están en crediflow-shared (co.crediflow.shared.soap).
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:cb="http://crediflow.co/core-bancario"
+           targetNamespace="http://crediflow.co/core-bancario"
+           elementFormDefault="qualified">
+
+    <xs:simpleType name="Producto">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="LIBRE_INVERSION"/>
+            <xs:enumeration value="VEHICULO"/>
+            <xs:enumeration value="VIVIENDA"/>
+            <xs:enumeration value="EDUCACION"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:element name="RegistrarCreditoRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="solicitudId" type="xs:long"/>
+                <xs:element name="numeroDocumento" type="xs:string"/>
+                <xs:element name="nombreCompleto" type="xs:string"/>
+                <xs:element name="producto" type="cb:Producto"/>
+                <xs:element name="monto" type="xs:decimal"/>
+                <xs:element name="plazoMeses" type="xs:int"/>
+                <xs:element name="tasaAnual" type="xs:decimal"/>
+                <xs:element name="cuotaMensual" type="xs:decimal"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="RegistrarCreditoResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="referencia" type="xs:string"/>
+                <xs:element name="numeroCuenta" type="xs:string"/>
+                <xs:element name="fechaDesembolso" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

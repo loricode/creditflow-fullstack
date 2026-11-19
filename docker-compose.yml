@@ -1,0 +1,170 @@
+# CrediFlow: sistema completo en local.
+#   docker compose up -d --build      ->  http://localhost:3100
+#
+# Orden de arranque: oracle + localstack -> terraform (crea S3/SNS/SQS/Secrets/IAM)
+# -> core-bancario -> api (aplica Flyway) -> publisher + worker -> frontend
+
+x-aws-local: &aws-local
+  AWS_REGION: us-east-1
+  AWS_ENDPOINT: http://localstack:4566
+  AWS_ACCESS_KEY_ID: test
+  AWS_SECRET_ACCESS_KEY: test
+
+x-db: &db
+  DB_URL: jdbc:oracle:thin:@//oracle:1521/FREEPDB1
+  # Usuario y contraseña se leen de Secrets Manager, no de aquí
+  DB_SECRET_ID: crediflow/oracle
+
+x-healthcheck-java: &healthcheck-java
+  interval: 10s
+  timeout: 5s
+  retries: 18
+  start_period: 30s
+
+services:
+  oracle:
+    image: gvenzl/oracle-free:23-slim-faststart
+    container_name: crediflow-oracle
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_ADMIN_PASSWORD:-CrediflowAdmin1}
+      APP_USER: crediflow
+      APP_USER_PASSWORD: ${DB_PASSWORD:-crediflow}
+    ports:
+      - "${ORACLE_PORT:-1522}:1521"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  localstack:
+    image: localstack/localstack:3.8
+    container_name: crediflow-localstack
+    environment:
+      SERVICES: s3,sqs,sns,secretsmanager,iam,sts
+      AWS_DEFAULT_REGION: us-east-1
+    ports:
+      - "${LOCALSTACK_PORT:-4576}:4566"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  terraform:
+    image: hashicorp/terraform:1.9.8
+    container_name: crediflow-terraform
+    working_dir: /infra/envs/local
+    entrypoint: ["sh", "-c", "terraform init -input=false && terraform apply -auto-approve -input=false"]
+    environment:
+      TF_DATA_DIR: /tf-data
+      TF_VAR_db_password: ${DB_PASSWORD:-crediflow}
+      TF_VAR_ia_api_key: ${ANTHROPIC_API_KEY:-}
+      TF_VAR_max_intentos: 3
+    volumes:
+      - ./infrastructure/terraform:/infra
+      - terraform-data:/tf-data
+      - terraform-state:/tf-state
+    depends_on:
+      localstack:
+        condition: service_healthy
+
+  core-bancario:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend.Dockerfile
+      target: core-bancario
+    image: crediflow-core-bancario:local
+    container_name: crediflow-core-bancario
+    environment:
+      CORE_TASA_FALLO: ${CORE_TASA_FALLO:-0.2}
+      JAVA_OPTS: -Xmx192m
+    ports:
+      - "${CORE_PORT:-8090}:8090"
+    healthcheck:
+      <<: *healthcheck-java
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/actuator/health"]
+
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend.Dockerfile
+      target: api
+    image: crediflow-api:local
+    container_name: crediflow-api
+    environment:
+      <<: [*aws-local, *db]
+      S3_BUCKET: crediflow-documentos
+      JAVA_OPTS: -Xmx320m
+    ports:
+      - "${API_PORT:-8088}:8080"
+    depends_on:
+      oracle:
+        condition: service_healthy
+      terraform:
+        condition: service_completed_successfully
+    healthcheck:
+      <<: *healthcheck-java
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+
+  publisher:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend.Dockerfile
+      target: publisher
+    image: crediflow-publisher:local
+    container_name: crediflow-publisher
+    environment:
+      <<: [*aws-local, *db]
+      SNS_TOPIC_ARN: arn:aws:sns:us-east-1:000000000000:crediflow-solicitudes-recibidas
+      JAVA_OPTS: -Xmx192m
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-java
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
+
+  worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend.Dockerfile
+      target: worker
+    image: crediflow-worker:local
+    container_name: crediflow-worker
+    environment:
+      <<: [*aws-local, *db]
+      IA_SECRET_ID: crediflow/ia
+      SQS_QUEUE_URL: http://localstack:4566/000000000000/crediflow-evaluacion
+      S3_BUCKET: crediflow-documentos
+      CORE_BANCARIO_URL: http://core-bancario:8090/ws
+      WORKER_MAX_INTENTOS: 3
+      JAVA_OPTS: -Xmx256m
+    depends_on:
+      api:
+        condition: service_healthy
+      core-bancario:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-java
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/frontend.Dockerfile
+    image: crediflow-frontend:local
+    container_name: crediflow-frontend
+    ports:
+      - "${FRONTEND_PORT:-3100}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  oracle-data:
+  terraform-data:
+  terraform-state:

@@ -1,0 +1,190 @@
+<section class="pagina">
+  <a mat-button routerLink="/solicitudes" class="volver"><mat-icon>arrow_back</mat-icon> Solicitudes</a>
+
+  @if (solicitud() === undefined) {
+    <div class="skeleton" style="height: 160px; margin-bottom: 20px"></div>
+    <div class="columnas"><div class="skeleton" style="height: 320px"></div><div class="skeleton" style="height: 320px"></div></div>
+  } @else {
+  @if (solicitud(); as s) {
+
+    <!-- ── Cabecera ── -->
+    <header class="cabecera" data-tour="cabecera" [class]="'cabecera ' + estados[s.estado].clase" @aparecer>
+      <div class="identidad">
+        <span class="avatar">{{ s.nombreCompleto.charAt(0) }}</span>
+        <div>
+          <span class="numero mono">Solicitud #{{ s.id }}</span>
+          <h1>{{ s.nombreCompleto }}</h1>
+          <span class="meta">
+            <mat-icon>{{ productos[s.tipoProducto].icono }}</mat-icon> {{ productos[s.tipoProducto].etiqueta }}
+            · {{ s.monto | cop }} a {{ s.plazoMeses }} meses
+          </span>
+        </div>
+      </div>
+      <div class="cabecera-derecha">
+        <app-estado-chip [estado]="s.estado" />
+        <div class="acciones">
+          @if (s.estado === 'APROBADA') {
+            <button mat-flat-button class="boton-blanco" data-tour="btn-amortizacion" (click)="verAmortizacion(s)"><mat-icon>table_chart</mat-icon> Amortización</button>
+          }
+          @if (s.s3Key) {
+            <button mat-stroked-button class="boton-contorno" data-tour="btn-original" (click)="verOriginal(s)"><mat-icon>cloud</mat-icon> Original en S3</button>
+          }
+          @if (s.estado === 'ERROR') {
+            <button mat-flat-button class="boton-blanco" [disabled]="reintentando()" (click)="reintentar(s)">
+              <mat-icon>replay</mat-icon> Reintentar
+            </button>
+          }
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Recorrido ── -->
+    <div class="tarjeta recorrido" data-tour="recorrido" @aparecer>
+      @for (e of etapas(); track e.clave; let ultimo = $last) {
+        <div class="etapa" [class]="'etapa ' + e.estado">
+          <span class="punto">
+            @if (e.estado === 'activo') { <mat-spinner diameter="22" /> }
+            @else { <mat-icon>{{ e.estado === 'fallo' ? 'priority_high' : e.estado === 'hecho' ? 'check' : e.icono }}</mat-icon> }
+          </span>
+          <span class="etiqueta">{{ e.etiqueta }}</span>
+        </div>
+        @if (!ultimo) { <span class="conector" [class.lleno]="e.estado === 'hecho'"></span> }
+      }
+    </div>
+
+    @if (s.estado === 'ERROR' && s.ultimoError) {
+      <div class="alerta-error" @aparecer>
+        <mat-icon>report</mat-icon>
+        <div>
+          <strong>La evaluación falló tras {{ s.intentos }} intentos</strong>
+          <p class="mono">{{ s.ultimoError }}</p>
+          <small>El mensaje quedó en la cola de errores (DLQ). Puedes reenviarla con «Reintentar».</small>
+        </div>
+      </div>
+    }
+
+    <div class="columnas">
+      <!-- ── Resultado ── -->
+      <article class="tarjeta" @aparecer>
+        <h2 class="tarjeta-titulo"><mat-icon>speed</mat-icon> Resultado de la evaluación</h2>
+
+        @if (s.score !== null) {
+          <div class="resultado" data-tour="resultado">
+            <div class="medidor" [class]="'medidor ' + riesgos[s.nivelRiesgo!].clase">
+              <svg viewBox="0 0 200 110" aria-hidden="true">
+                <defs>
+                  <linearGradient id="gradMedidor" x1="0" x2="1">
+                    <stop offset="0" stop-color="#e11d48" /><stop offset=".5" stop-color="#f59e0b" /><stop offset="1" stop-color="#10b981" />
+                  </linearGradient>
+                </defs>
+                <path d="M15 100 A85 85 0 0 1 185 100" class="pista" />
+                <path d="M15 100 A85 85 0 0 1 185 100" class="arco" />
+                <g class="aguja" [style.transform]="'rotate(' + (anguloScore() - 90) + 'deg)'">
+                  <line x1="100" y1="100" x2="100" y2="30" /><circle cx="100" cy="100" r="7" />
+                </g>
+              </svg>
+              <div class="medidor-valor">
+                <strong [appContador]="s.score!"></strong>
+                <span>{{ riesgos[s.nivelRiesgo!].etiqueta }}</span>
+              </div>
+            </div>
+
+            <dl class="cifras">
+              <div><dt>Tasa asignada</dt><dd>{{ s.tasaAnual | number: '1.1-2' }} % E.A.</dd></div>
+              <div><dt>Cuota mensual</dt><dd>{{ s.cuotaMensual | cop }}</dd></div>
+              <div>
+                <dt>Carga sobre capacidad</dt>
+                <dd [class.excede]="(cargaCuota() ?? 0) > 40">{{ cargaCuota() | number: '1.0-1' }} %</dd>
+              </div>
+              @if (s.referenciaCore) {
+                <div><dt>Referencia core</dt><dd class="mono">{{ s.referenciaCore }}</dd></div>
+              }
+            </dl>
+          </div>
+        } @else {
+          <div class="esperando">
+            <mat-spinner diameter="44" />
+            <p>Calculando score, tasa y cuota en <b>PKG_CREDITO</b>…</p>
+          </div>
+        }
+
+        <!-- Explicación IA -->
+        <div class="ia" data-tour="ia" [class.cargando]="!s.explicacionIa">
+          <div class="ia-cabecera">
+            <span class="ia-icono"><mat-icon>auto_awesome</mat-icon></span>
+            <strong>¿Por qué esta decisión?</strong>
+            @if (s.proveedorIa) {
+              <span class="insignia" [class.claude]="s.proveedorIa === 'claude'"
+                    [matTooltip]="s.proveedorIa === 'claude' ? 'Redactada por Claude (Anthropic)' : 'Generada por el motor de reglas (sin clave de IA o respaldo)'">
+                {{ s.proveedorIa === 'claude' ? 'Claude' : 'Reglas' }}
+              </span>
+            }
+          </div>
+          @if (s.explicacionIa) {
+            <p @aparecer>{{ s.explicacionIa }}</p>
+          } @else if (enProceso()) {
+            <div class="lineas"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton corta"></span></div>
+          } @else {
+            <p class="texto-suave">Sin explicación disponible.</p>
+          }
+        </div>
+      </article>
+
+      <div class="lateral">
+        <!-- ── Historial ── -->
+        <article class="tarjeta" @aparecer>
+          <h2 class="tarjeta-titulo"><mat-icon>timeline</mat-icon> Historial de estados</h2>
+          <ol class="linea-tiempo" data-tour="historial" [@listaEscalonada]="s.historial.length">
+            @for (h of s.historial; track $index) {
+              <li class="escalonado" [class]="'escalonado ' + estados[h.estadoNuevo].clase">
+                <span class="marca"><mat-icon>{{ estados[h.estadoNuevo].icono }}</mat-icon></span>
+                <div>
+                  <strong>{{ estados[h.estadoNuevo].etiqueta }}</strong>
+                  <small class="texto-suave">{{ h.cambiadoEn | date: 'd MMM y, h:mm:ss a' }}</small>
+                </div>
+              </li>
+            }
+          </ol>
+          <small class="texto-suave nota">Registrado por el trigger <span class="mono">TRG_SOLICITUD_HISTORIAL</span></small>
+        </article>
+
+        <!-- ── Intentos ── -->
+        <article class="tarjeta" @aparecer>
+          <h2 class="tarjeta-titulo"><mat-icon>replay</mat-icon> Intentos del worker</h2>
+          @if (s.historialIntentos.length) {
+            <ul class="intentos" data-tour="intentos">
+              @for (i of s.historialIntentos; track $index) {
+                <li [class.fallo]="i.resultado === 'FALLO'">
+                  <mat-icon>{{ i.resultado === 'EXITO' ? 'check_circle' : 'cancel' }}</mat-icon>
+                  <div>
+                    <strong>Intento {{ i.numeroIntento }} · {{ i.duracionMs }} ms</strong>
+                    @if (i.error) { <small class="mono">{{ i.error }}</small> }
+                  </div>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="texto-suave">Esperando al worker…</p>
+          }
+        </article>
+
+        <!-- ── Solicitante ── -->
+        <article class="tarjeta" @aparecer>
+          <h2 class="tarjeta-titulo"><mat-icon>person</mat-icon> Solicitante</h2>
+          <dl class="datos">
+            <div><dt>Documento</dt><dd class="mono">{{ s.numeroDocumento }}</dd></div>
+            <div><dt>Correo</dt><dd>{{ s.email }}</dd></div>
+            <div><dt>Ingresos</dt><dd>{{ s.ingresosMensuales | cop }}</dd></div>
+            <div><dt>Gastos</dt><dd>{{ s.gastosMensuales | cop }}</dd></div>
+            <div><dt>Clave externa</dt><dd class="mono corta" [matTooltip]="s.externalId">{{ s.externalId }}</dd></div>
+          </dl>
+        </article>
+      </div>
+    </div>
+  } @else {
+    <app-vacio icono="search_off" titulo="Solicitud no encontrada" mensaje="Puede que el número no exista.">
+      <a mat-stroked-button routerLink="/solicitudes">Ver solicitudes</a>
+    </app-vacio>
+  }
+  }
+</section>

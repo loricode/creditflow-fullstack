@@ -1,0 +1,18 @@
+server:
+  port: ${PORT:8090}
+
+spring:
+  application:
+    name: crediflow-core-bancario
+  webservices:
+    path: /ws
+
+core:
+  # Probabilidad de responder con un SOAP Fault (0 = nunca, 1 = siempre)
+  tasa-fallo: ${CORE_TASA_FALLO:0.2}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

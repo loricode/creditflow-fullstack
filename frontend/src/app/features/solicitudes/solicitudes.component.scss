@@ -1,0 +1,42 @@
+.en-vivo {
+  display: inline-flex; align-items: center; gap: 6px; margin-left: 8px;
+  color: var(--cf-pri-700); font-weight: 600; font-size: 13px;
+  i { width: 8px; height: 8px; border-radius: 50%; background: var(--cf-pri-500); animation: latir 1.2s infinite; }
+}
+@keyframes latir { 0% { box-shadow: 0 0 0 0 rgba(6, 182, 212, .7); } 100% { box-shadow: 0 0 0 10px rgba(6, 182, 212, 0); } }
+
+.filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 18px; padding: 16px 18px; }
+.buscador { flex: 1 1 280px; }
+.selector { width: 200px; }
+.chips { flex-basis: 100%; }
+
+.chip-aprobada.mat-mdc-chip-selected { --mdc-chip-elevated-selected-container-color: #d1fae5; }
+.chip-rechazada.mat-mdc-chip-selected { --mdc-chip-elevated-selected-container-color: #ffe4e6; }
+.chip-evaluacion.mat-mdc-chip-selected { --mdc-chip-elevated-selected-container-color: #fef3c7; }
+.chip-error.mat-mdc-chip-selected { --mdc-chip-elevated-selected-container-color: #fee2e2; }
+
+.tabla-contenedor { position: relative; padding: 8px 8px 0; overflow: hidden; }
+.progreso { position: absolute; top: 0; left: 0; right: 0; }
+.tabla-scroll { overflow-x: auto; }
+table { width: 100%; min-width: 820px; }
+
+.solicitante { display: flex; align-items: center; gap: 10px;
+  div { display: flex; flex-direction: column; } small { font-size: 12px; } }
+.avatar {
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; flex: none;
+  background: linear-gradient(135deg, #0891b2, #2dd4bf); color: #fff; font-weight: 800; font-size: 14px;
+}
+
+.producto { display: inline-flex; align-items: center; gap: 6px;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--cf-pri-600); } }
+
+.score {
+  display: inline-block; min-width: 44px; text-align: center; padding: 3px 10px; border-radius: 10px; font-weight: 800; font-size: 13px;
+  &.bajo { background: #d1fae5; color: #065f46; }
+  &.medio { background: #fef3c7; color: #92400e; }
+  &.alto { background: #ffe4e6; color: #9f1239; }
+}
+
+.fila-skeleton { height: 52px; margin: 10px 12px; }
+
+mat-paginator { background: transparent; }

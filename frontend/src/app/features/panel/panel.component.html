@@ -1,0 +1,116 @@
+<section class="pagina">
+  <div class="heroe" @aparecer>
+    <div class="heroe-texto">
+      <span class="saludo">Panel de originación</span>
+      <h1>Créditos evaluados en segundos</h1>
+      <p>
+        Cada solicitud pasa por un motor de reglas en PL/SQL, queda archivada en S3, recibe una
+        explicación generada con IA y se registra en el core bancario por SOAP.
+      </p>
+      <div class="heroe-acciones">
+        <button mat-flat-button class="boton-blanco" (click)="abrirNueva()">
+          <mat-icon>rocket_launch</mat-icon> Crear solicitud
+        </button>
+        <a mat-button class="boton-transparente" routerLink="/simulador">
+          <mat-icon>calculate</mat-icon> Simular cuota
+        </a>
+      </div>
+    </div>
+    <div class="flujo" data-tour="flujo" aria-label="Flujo de evaluación">
+      @for (paso of ['API REST', 'Outbox', 'SNS → SQS', 'PL/SQL', 'S3', 'IA', 'SOAP']; track paso; let i = $index) {
+        <span class="nodo" [style.animation-delay.ms]="i * 180">{{ paso }}</span>
+      }
+    </div>
+  </div>
+
+  @if (cargando()) {
+    <div class="kpis">
+      @for (i of [1, 2, 3, 4]; track i) { <div class="skeleton" style="height: 96px"></div> }
+    </div>
+  } @else {
+  @if (stats(); as s) {
+    <div class="kpis" data-tour="kpis" [@listaEscalonada]="s.total">
+      <app-kpi-card class="escalonado" titulo="Solicitudes" [valor]="s.total" icono="receipt_long" tono="teal"
+                    [detalle]="s.enProceso + ' en evaluación'" />
+      <app-kpi-card class="escalonado" titulo="Tasa de aprobación" [valor]="s.tasaAprobacion" formato="porcentaje"
+                    icono="verified" tono="verde" [detalle]="s.aprobadas + ' aprobadas · ' + s.rechazadas + ' rechazadas'" />
+      <app-kpi-card class="escalonado" titulo="Monto aprobado" [valor]="s.montoAprobado" formato="cop"
+                    icono="account_balance" tono="cyan" />
+      <app-kpi-card class="escalonado" titulo="Score promedio" [valor]="s.scorePromedio" icono="speed" tono="ambar"
+                    [detalle]="s.errores ? s.errores + ' con error' : 'sin errores'" />
+    </div>
+
+    <div class="rejilla">
+      <article class="tarjeta" @aparecer>
+        <h2 class="tarjeta-titulo" data-tour="grafico"><mat-icon>bar_chart</mat-icon> Últimos 7 días</h2>
+        <div class="grafico">
+          @for (d of s.ultimosDias; track d.dia) {
+            <div class="columna" [matTooltip]="d.total + ' solicitudes · ' + d.aprobadas + ' aprobadas'">
+              <div class="barras">
+                <div class="barra total" [style.height.%]="d.total / maxDia() * 100"></div>
+                <div class="barra aprobadas" [style.height.%]="d.aprobadas / maxDia() * 100"></div>
+              </div>
+              <span class="dia">{{ d.dia | date: 'EEE d' }}</span>
+            </div>
+          }
+        </div>
+        <div class="leyenda">
+          <span><i class="punto total"></i> Recibidas</span>
+          <span><i class="punto aprobadas"></i> Aprobadas</span>
+        </div>
+      </article>
+
+      <article class="tarjeta" @aparecer>
+        <h2 class="tarjeta-titulo"><mat-icon>donut_small</mat-icon> Por producto</h2>
+        @if (s.porProducto.length) {
+          <ul class="productos">
+            @for (p of s.porProducto; track p.producto) {
+              <li>
+                <span class="icono-producto"><mat-icon>{{ productos[p.producto].icono }}</mat-icon></span>
+                <div class="producto-info">
+                  <div class="producto-fila">
+                    <strong>{{ productos[p.producto].etiqueta }}</strong>
+                    <span>{{ p.aprobadas }}/{{ p.total }}</span>
+                  </div>
+                  <div class="pista"><div class="relleno" [style.width.%]="p.total / maxProducto() * 100"></div></div>
+                  <small class="texto-suave">{{ p.montoAprobado | cop: 'compacto' }} aprobados</small>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <app-vacio icono="category" titulo="Aún no hay datos" mensaje="Crea la primera solicitud para ver el desglose." />
+        }
+      </article>
+    </div>
+
+    <article class="tarjeta" @aparecer>
+      <div class="titulo-con-accion">
+        <h2 class="tarjeta-titulo"><mat-icon>schedule</mat-icon> Actividad reciente</h2>
+        <a mat-button routerLink="/solicitudes">Ver todas <mat-icon iconPositionEnd>chevron_right</mat-icon></a>
+      </div>
+      @if (recientes().length) {
+        <ul class="recientes" data-tour="recientes" [@listaEscalonada]="recientes().length">
+          @for (r of recientes(); track r.id) {
+            <li class="escalonado" [routerLink]="['/solicitudes', r.id]" tabindex="0">
+              <span class="avatar">{{ r.nombreCompleto.charAt(0) }}</span>
+              <div class="reciente-info">
+                <strong>{{ r.nombreCompleto }}</strong>
+                <small class="texto-suave">#{{ r.id }} · {{ productos[r.tipoProducto].etiqueta }} · {{ r.creadoEn | date: 'short' }}</small>
+              </div>
+              <span class="monto">{{ r.monto | cop }}</span>
+              <app-estado-chip [estado]="r.estado" />
+            </li>
+          }
+        </ul>
+      } @else {
+        <app-vacio icono="rocket_launch" titulo="Todo listo para empezar" mensaje="Registra una solicitud y mira cómo se evalúa en tiempo real.">
+          <button mat-flat-button class="boton-degradado" (click)="abrirNueva()"><mat-icon>add</mat-icon> Nueva solicitud</button>
+        </app-vacio>
+      }
+    </article>
+  } @else {
+    <app-vacio icono="cloud_off" titulo="Sin conexión con la API" mensaje="Verifica que los servicios estén arriba (docker compose ps)." />
+  }
+  }
+</section>

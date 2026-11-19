@@ -1,0 +1,52 @@
+server:
+  port: ${PORT:8082}
+  shutdown: graceful
+
+spring:
+  application:
+    name: crediflow-worker
+  datasource:
+    url: ${DB_URL:jdbc:oracle:thin:@//localhost:1521/FREEPDB1}
+    username: ${DB_USER:crediflow}
+    password: ${DB_PASSWORD:crediflow}
+    hikari:
+      maximum-pool-size: 5
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+  # Las migraciones las aplica la API
+  flyway:
+    enabled: false
+  lifecycle:
+    timeout-per-shutdown-phase: 40s
+
+crediflow:
+  aws:
+    region: ${AWS_REGION:us-east-1}
+    endpoint: ${AWS_ENDPOINT:}
+  secrets:
+    db-secret-id: ${DB_SECRET_ID:}
+    ia-secret-id: ${IA_SECRET_ID:}
+  worker:
+    queue-url: ${SQS_QUEUE_URL:http://localhost:4566/000000000000/crediflow-evaluacion}
+    concurrencia: ${WORKER_CONCURRENCIA:2}
+    max-intentos: ${WORKER_MAX_INTENTOS:3}
+    espera-segundos: 10
+    bucket: ${S3_BUCKET:crediflow-documentos}
+  core-bancario:
+    url: ${CORE_BANCARIO_URL:http://localhost:8090/ws}
+    timeout-segundos: 5
+  ia:
+    api-key: ${ANTHROPIC_API_KEY:}
+    modelo: ${IA_MODELO:claude-opus-5-5}
+    timeout-segundos: 30
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

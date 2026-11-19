@@ -1,0 +1,37 @@
+<header class="barra">
+  <div class="barra-contenido">
+    <a class="marca" routerLink="/panel" aria-label="CrediFlow, ir al panel">
+      <span class="logo">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M42 22a14 14 0 1 0 0 20" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="44" cy="32" r="4" fill="#5eead4"/>
+        </svg>
+      </span>
+      <span class="nombre">Credi<b>Flow</b></span>
+    </a>
+
+    <nav class="navegacion" aria-label="Principal">
+      @for (enlace of enlaces; track enlace.ruta) {
+        <a class="enlace" [attr.data-tour]="'nav-' + enlace.etiqueta" [routerLink]="enlace.ruta" routerLinkActive="activo"
+           [routerLinkActiveOptions]="{ exact: enlace.ruta === '/panel' }">
+          <mat-icon>{{ enlace.icono }}</mat-icon>
+          <span>{{ enlace.etiqueta }}</span>
+        </a>
+      }
+    </nav>
+
+    <button mat-flat-button class="boton-nueva" data-tour="nueva-solicitud" (click)="abrirNueva()">
+      <mat-icon>add_circle</mat-icon>
+      <span class="texto-boton">Nueva solicitud</span>
+    </button>
+  </div>
+  <div class="ola" aria-hidden="true"></div>
+</header>
+
+<main class="contenido">
+  <router-outlet />
+</main>
+
+<footer class="pie">
+  Java 17 · Spring Boot · Oracle PL/SQL · Angular · AWS (SNS · SQS · S3 · Secrets Manager) · Terraform · Claude
+</footer>
